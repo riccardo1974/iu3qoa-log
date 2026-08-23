@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>My Operating Style</title>
+</head>
+<body style="background: #eef2f3; padding: 40px 0;">
+
+<div style="font-family: Arial, Helvetica, sans-serif; background:#f0f0f0; border-radius:12px; padding:24px 28px; max-width:640px; margin:0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+  <h2 style="text-align:center; font-size:24px; color:#333; margin:0 0 20px 0;">My operating style and pwr</h2>
+
+  <!-- Barra Modi -->
+  <div style="width:100%; height:26px; border-radius:13px; overflow:hidden; border:1px solid #000; display:flex; background:#ddd;">
+    <div id="bar-cw" style="width:0%; background:#c0392b; transition: width 0.5s;"></div>
+    <div id="bar-ssb" style="width:0%; background:#1e8449; transition: width 0.5s;"></div>
+    <div id="bar-ft8" style="width:0%; background:#e67e22; transition: width 0.5s;"></div>
+  </div>
+  <div style="margin:6px 0 22px 0; font-size:13px; color:#333;">
+    <span style="display:inline-block; width:10px; height:10px; background:#c0392b; margin-right:4px;"></span>CW (<span id="pct-cw">0%</span>)
+    <span style="display:inline-block; width:10px; height:10px; background:#1e8449; margin:0 4px 0 12px;"></span>SSB (<span id="pct-ssb">0%</span>)
+    <span style="display:inline-block; width:10px; height:10px; background:#e67e22; margin:0 4px 0 12px;"></span>FT8 (<span id="pct-ft8">0%</span>)
+  </div>
+
+  <!-- Barra Potenza -->
+  <div style="width:100%; height:26px; border-radius:13px; overflow:hidden; border:1px solid #000; display:flex; background:#ddd;">
+    <div id="bar-qrp" style="width:0%; background:#2e7fd6; transition: width 0.5s;"></div>
+    <div id="bar-qro" style="width:0%; background:#c0392b; transition: width 0.5s;"></div>
+    <div id="bar-unspec" style="width:0%; background:#7f8c8d; transition: width 0.5s;"></div>
+  </div>
+  <div style="margin:6px 0 22px 0; font-size:13px; color:#333;">
+    <span style="display:inline-block; width:10px; height:10px; background:#2e7fd6; margin-right:4px;"></span>QRP  (<span id="pct-qrp">0%</span>)
+    <span style="display:inline-block; width:10px; height:10px; background:#c0392b; margin:0 4px 0 12px;"></span>QRO  (<span id="pct-qro">0%</span>)
+    <span style="display:inline-block; width:10px; height:10px; background:#7f8c8d; margin:0 4px 0 12px;"></span>Non specificata (<span id="pct-unspec">0%</span>)
+  </div>
+
+  <!-- Barra Bande -->
+  <div style="width:100%; height:26px; border-radius:13px; overflow:hidden; border:1px solid #000; display:flex; background:#ddd;" id="band-bar-container"></div>
+  <div style="margin:6px 0 0 0; font-size:13px; color:#333;" id="band-legend-container">
+    <span id="status-text" style="color: #666; font-style: italic;">Caricamento log in corso...</span>
+  </div>
+</div>
+
+<script>
+async function loadAdifStats() {
+    // URL Raw aggiornato con il nuovo nome del repository (iu3qoa-qsolog)
+    const adifUrl = 'https://raw.githubusercontent.com/riccardo1974/iu3qoa-qsolog/main/log.adif';
+
+    try {
+        const response = await fetch(adifUrl);
+        if (!response.ok) throw new Error('Impossibile scaricare il file ADIF');
+        const text = await response.text();
+
+        const records = text.split(/<eor>/i);
+        
+        let totalQso = 0;
+        let modes = { CW: 0, SSB: 0, FT8: 0 };
+        let power = { QRP: 0, QRO: 0, UNKNOWN: 0 };
+        let bands = {};
+
+        records.forEach(record => {
+            if (!record.includes('<call:')) return;
+            totalQso++;
+
+            // Modo
+            const modeMatch = record.match(/<mode:\d+>([^<>\s]+)/i);
+            if (modeMatch) {
+                let m = modeMatch[1].toUpperCase();
+                if (modes[m] !== undefined) modes[m]++;
+            }
+
+            // Potenza
+            const pwrMatch = record.match(/<tx_pwr:\d+>([\d.]+)/i);
+            if (pwrMatch) {
+                let p = parseFloat(pwrMatch[1]);
+                if (p <= 5) power.QRP++;
+                else power.QRO++;
+            } else {
+                power.UNKNOWN++;
+            }
+
+            // Banda
+            const bandMatch = record.match(/<band:\d+>([^<>\s]+)/i);
+            if (bandMatch) {
+                let b = bandMatch[1].toLowerCase();
+                bands[b] = (bands[b] || 0) + 1;
+            }
+        });
+
+        if (totalQso === 0) {
+            document.getElementById('status-text').innerText = "Nessun QSO trovato nel file.";
+            return;
+        }
+
+        // Calcoli percentuali Modi
+        let pCW = (modes.CW / totalQso) * 100;
+        let pSSB = (modes.SSB / totalQso) * 100;
+        let pFT8 = (modes.FT8 / totalQso) * 100;
+
+        document.getElementById('bar-cw').style.width = pCW + '%';
+        document.getElementById('bar-ssb').style.width = pSSB + '%';
+        document.getElementById('bar-ft8').style.width = pFT8 + '%';
+        
+        document.getElementById('pct-cw').innerText = pCW.toFixed(1) + '%';
+        document.getElementById('pct-ssb').innerText = pSSB.toFixed(1) + '%';
+        document.getElementById('pct-ft8').innerText = pFT8.toFixed(1) + '%';
+
+        // Calcoli percentuali Potenza
+        let pQrp = (power.QRP / totalQso) * 100;
+        let pQro = (power.QRO / totalQso) * 100;
+        let pUnspec = (power.UNKNOWN / totalQso) * 100;
+
+        document.getElementById('bar-qrp').style.width = pQrp + '%';
+        document.getElementById('bar-qro').style.width = pQro + '%';
+        document.getElementById('bar-unspec').style.width = pUnspec + '%';
+
+        document.getElementById('pct-qrp').innerText = pQrp.toFixed(1) + '%';
+        document.getElementById('pct-qro').innerText = pQro.toFixed(1) + '%';
+        document.getElementById('pct-unspec').innerText = pUnspec.toFixed(1) + '%';
+
+        document.getElementById('status-text').innerText = `Analizzati ${totalQso} QSO con successo.`;
+
+        // Bande dinamiche ordinate
+        let sortedBands = Object.entries(bands).sort((a, b) => b[1] - a[1]);
+        let bandBarHtml = '';
+        let bandLegendHtml = '';
+        const bandColors = {'20m': '#e8a33d', '40m': '#6c3483', '80m': '#1a9e77', '30m': '#e186a8', '15m': '#2e7fd6', '10m': '#c0392b', '17m': '#1e8449', '12m': '#7f8c8d', '160m': '#d35400'};
+
+        sortedBands.forEach(([band, count]) => {
+            let pBand = (count / totalQso) * 100;
+            let color = bandColors[band] || '#333333';
+            bandBarHtml += `<div style="width:${pBand}%; background:${color};"></div>`;
+            bandLegendHtml += `<span style="display:inline-block; width:10px; height:10px; background:${color}; margin:0 4px 0 12px;"></span>${band} (${pBand.toFixed(1)}%) `;
+        });
+
+        document.getElementById('band-bar-container').innerHTML = bandBarHtml;
+        document.getElementById('band-legend-container').innerHTML = bandLegendHtml;
+
+    } catch (error) {
+        console.error(error);
+        document.getElementById('status-text').innerText = "Errore nel caricamento del log.";
+    }
+}
+
+loadAdifStats();
+</script>
+
+</body>
+</html>
