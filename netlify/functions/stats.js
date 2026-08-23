@@ -22,6 +22,7 @@ exports.handler = async function(event, context) {
             if (!/<\s*call\s*[:>]/i.test(record)) return;
             totalQso++;
 
+            // 1. MODI
             let modeMatch = record.match(/<\s*mode\s*(?::\d+)?\s*>([^<>]+)/i);
             let m = modeMatch ? modeMatch[1].trim().toUpperCase() : 'OTHER';
             if (m.includes('CW')) modes.CW++;
@@ -29,22 +30,35 @@ exports.handler = async function(event, context) {
             else if (m.includes('FT8')) modes.FT8++;
             else modes.OTHER++;
 
+            // 2. POTENZA (Cerca QRP nelle note/commenti o nel tx_pwr)
+            let noteMatch = record.match(/<\s*(?:notes|comment|app_[^>]+)\s*(?::\d+)?\s*>([^<>]+)/i);
             let pwrMatch = record.match(/<\s*tx_pwr\s*(?::\d+)?\s*>([^<>]+)/i);
-            if (pwrMatch) {
+            
+            let powerText = (pwrMatch ? pwrMatch[1] : '') + ' ' + (noteMatch ? noteMatch[1] : '');
+            powerText = powerText.toUpperCase();
+
+            if (powerText.includes('QRP')) {
+                power.QRP++;
+            } else if (pwrMatch) {
                 let p = parseFloat(pwrMatch[1]);
                 if (!isNaN(p)) {
                     if (p <= 5) power.QRP++;
                     else power.QRO++;
                 } else {
-                    power.UNKNOWN++;
+                    power.QRO++; // Default a QRO se c'è un valore numerico alto o non specificato ma non QRP
                 }
             } else {
                 power.UNKNOWN++;
             }
 
+            // 3. BANDE (Supporto flessibile per qualsiasi formato di banda ADIF)
             let bandMatch = record.match(/<\s*band\s*(?::\d+)?\s*>([^<>]+)/i);
             if (bandMatch) {
                 let b = bandMatch[1].trim().toLowerCase();
+                // Normalizzazione standard delle bande (es. 40m, 20m, ecc.)
+                if (!b.endsWith('m') && !b.includes('cm') && !b.includes('km')) {
+                    b = b + 'm'; 
+                }
                 bands[b] = (bands[b] || 0) + 1;
             } else {
                 bands['unknown'] = (bands['unknown'] || 0) + 1;
@@ -63,9 +77,8 @@ exports.handler = async function(event, context) {
         let pUnspec = ((power.UNKNOWN / totalQso) * 100).toFixed(1);
 
         let sortedBands = Object.entries(bands).sort((a, b) => b[1] - a[1]);
-        const bandColors = {'20m': '#e8a33d', '40m': '#6c3483', '80m': '#1a9e77', '30m': '#e186a8', '15m': '#2e7fd6', '10m': '#c0392b', '17m': '#1e8449', '12m': '#7f8c8d', '160m': '#d35400'};
+        const bandColors = {'20m': '#e8a33d', '40m': '#6c3483', '80m': '#1a9e77', '30m': '#e186a8', '15m': '#2e7fd6', '10m': '#c0392b', '17m': '#1e8449', '12m': '#7f8c8d', '160m': '#d35400', '6m': '#9b59b6', '2m': '#3498db'};
 
-        // Calcolo larghezze barre in pixel (su 844px di larghezza utile)
         const maxW = 844;
         let wCw = (modes.CW / totalQso) * maxW;
         let wSsb = (modes.SSB / totalQso) * maxW;
@@ -82,27 +95,31 @@ exports.handler = async function(event, context) {
         sortedBands.forEach(([band, count]) => {
             let bW = (count / totalQso) * maxW;
             let col = bandColors[band] || '#555555';
-            bandsRects += `<rect x="${currentBandX}" y="196" width="${bW}" height="26" fill="${col}" />`;
+            bandsRects += `<rect x="${currentBandX}" y="0" width="${bW}" height="26" fill="${col}" />`;
             currentBandX += bW;
         });
 
-        // Generazione stringa legenda bande
-        let bandLegendItems = '';
-        let lx = 28, ly = 246;
-        let itemCounter = 0;
+        // Generazione legenda bande su una o due righe
+        let bandLegendItems1 = '';
+        let bandLegendItems2 = '';
+        let lx1 = 28, lx2 = 28;
+        let countBands = 0;
+
         sortedBands.forEach(([band, count]) => {
             let pB = ((count / totalQso) * 100).toFixed(1);
             let col = bandColors[band] || '#555555';
-            bandLegendItems += `<circle cx="${lx + 5}" cy="${ly - 4}" r="5" fill="${col}" /><text x="${lx + 15}" y="${ly}" font-family="Arial, sans-serif" font-size="13" fill="#333">${band} (${pB}%)</text>`;
-            lx += 110;
-            itemCounter++;
-            if (itemCounter >= 7 && ly === 246) { // Gestione eventuale capo riga bande
-                lx = 28;
-                ly = 266;
+            let itemHtml = `<circle cx="${countBands < 7 ? lx1 + 5 : lx2 + 5}" cy="-4" r="5" fill="${col}" /><text x="${countBands < 7 ? lx1 + 15 : lx2 + 15}" y="0" font-family="Arial, sans-serif" font-size="13" fill="#333">${band} (${pB}%)</text>`;
+            
+            if (countBands < 7) {
+                bandLegendItems1 += itemHtml;
+                lx1 += 110;
+            } else {
+                bandLegendItems2 += itemHtml;
+                lx2 += 110;
             }
+            countBands++;
         });
 
-        // Codice SVG pulito e scalato esattamente a 900x306px
         const svgContent = `<svg width="900" height="306" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
@@ -110,14 +127,12 @@ exports.handler = async function(event, context) {
     </filter>
   </defs>
 
-  <!-- Box di sfondo -->
   <rect x="0" y="0" width="900" height="306" rx="12" fill="#f0f0f0" filter="url(#shadow)" />
 
-  <!-- Titolo -->
   <text x="450" y="32" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#333" text-anchor="middle">My operating style and pwr setting</text>
 
   <!-- BARRA MODI -->
-  <g transform="translate(28, 55)">
+  <g transform="translate(28, 50)">
     <rect width="844" height="26" rx="13" fill="#ddd" stroke="#000" stroke-width="1"/>
     <svg width="844" height="26" overflow="hidden" style="border-radius: 13px;">
       <rect x="0" y="0" width="${wCw}" height="26" fill="#c0392b" />
@@ -126,7 +141,6 @@ exports.handler = async function(event, context) {
       <rect x="${wCw + wSsb + wFt8}" y="0" width="${wOther}" height="26" fill="#7f8c8d" />
     </svg>
   </g>
-  <!-- Legenda Modi -->
   <g transform="translate(28, 97)" font-family="Arial, sans-serif" font-size="13" fill="#333">
     <circle cx="5" cy="-4" r="5" fill="#c0392b"/><text x="15" y="0">CW (${pCW}%)</text>
     <circle cx="115" cy="-4" r="5" fill="#1e8449"/><text x="125" y="0">SSB (${pSSB}%)</text>
@@ -143,7 +157,6 @@ exports.handler = async function(event, context) {
       <rect x="${wQrp + wQro}" y="0" width="${wUnspec}" height="26" fill="#7f8c8d" />
     </svg>
   </g>
-  <!-- Legenda Potenza -->
   <g transform="translate(28, 167)" font-family="Arial, sans-serif" font-size="13" fill="#333">
     <circle cx="5" cy="-4" r="5" fill="#2e7fd6"/><text x="15" y="0">QRP (${pQrp}%)</text>
     <circle cx="115" cy="-4" r="5" fill="#c0392b"/><text x="125" y="0">QRO (${pQro}%)</text>
@@ -157,9 +170,15 @@ exports.handler = async function(event, context) {
       ${bandsRects}
     </svg>
   </g>
-  <!-- Legenda Bande Dinamica -->
-  <g transform="translate(0, 0)">
-    ${bandLegendItems}
+  
+  <!-- Legenda Bande Riga 1 -->
+  <g transform="translate(0, 246)">
+    ${bandLegendItems1}
+  </g>
+  
+  <!-- Legenda Bande Riga 2 (se presente) -->
+  <g transform="translate(0, 268)">
+    ${bandLegendItems2}
   </g>
 </svg>`;
 
