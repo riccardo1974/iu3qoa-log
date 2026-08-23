@@ -2,158 +2,209 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>My Operating Style</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QSO Statistics - IU3QOA</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: Arial, sans-serif;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .card {
+            width: 900px;
+            height: 306px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 20px 28px;
+            box-sizing: border-box;
+            position: relative;
+        }
+        h2 {
+            text-align: center;
+            font-size: 20px;
+            margin: 0 0 18px 0;
+            color: #333;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #555;
+        }
+        .bar-container {
+            width: 844px;
+            height: 26px;
+            background: #ddd;
+            border: 1px solid #000;
+            border-radius: 13px;
+            display: flex;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .bar-segment {
+            height: 100%;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    </style>
 </head>
-<body style="background: transparent; padding: 0; margin: 0; overflow: hidden;">
+<body>
 
-<div id="widget-box" style="font-family: Arial, Helvetica, sans-serif; background:#f0f0f0; border-radius:12px; padding:24px 28px; width:900px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-  <h2 style="text-align:center; font-size:24px; color:#333; margin:0 0 20px 0;">My operating style and pwr setting</h2>
-
-  <!-- Barra Modi -->
-  <div style="width:100%; height:26px; border-radius:13px; overflow:hidden; border:1px solid #000; display:flex; background:#ddd;">
-    <div id="bar-cw" style="width:0%; background:#c0392b; transition: width 0.5s;"></div>
-    <div id="bar-ssb" style="width:0%; background:#1e8449; transition: width 0.5s;"></div>
-    <div id="bar-ft8" style="width:0%; background:#e67e22; transition: width 0.5s;"></div>
-    <div id="bar-other" style="width:0%; background:#7f8c8d; transition: width 0.5s;"></div>
-  </div>
-  <div style="margin:6px 0 22px 0; font-size:13px; color:#333;">
-    <span style="display:inline-block; width:10px; height:10px; background:#c0392b; margin-right:4px;"></span>CW (<span id="pct-cw">0%</span>)
-    <span style="display:inline-block; width:10px; height:10px; background:#1e8449; margin:0 4px 0 12px;"></span>SSB (<span id="pct-ssb">0%</span>)
-    <span style="display:inline-block; width:10px; height:10px; background:#e67e22; margin:0 4px 0 12px;"></span>FT8 (<span id="pct-ft8">0%</span>)
-    <span style="display:inline-block; width:10px; height:10px; background:#7f8c8d; margin:0 4px 0 12px;"></span>Other (<span id="pct-other">0%</span>)
-  </div>
-
-  <!-- Barra Potenza -->
-  <div style="width:100%; height:26px; border-radius:13px; overflow:hidden; border:1px solid #000; display:flex; background:#ddd;">
-    <div id="bar-qrp" style="width:0%; background:#2e7fd6; transition: width 0.5s;"></div>
-    <div id="bar-qro" style="width:0%; background:#c0392b; transition: width 0.5s;"></div>
-    <div id="bar-unspec" style="width:0%; background:#7f8c8d; transition: width 0.5s;"></div>
-  </div>
-  <div style="margin:6px 0 22px 0; font-size:13px; color:#333;">
-    <span style="display:inline-block; width:10px; height:10px; background:#2e7fd6; margin-right:4px;"></span>QRP (<span id="pct-qrp">0%</span>)
-    <span style="display:inline-block; width:10px; height:10px; background:#c0392b; margin:0 4px 0 12px;"></span>QRO (<span id="pct-qro">0%</span>)
-    <span style="display:inline-block; width:10px; height:10px; background:#7f8c8d; margin:0 4px 0 12px;"></span>Not specified (<span id="pct-unspec">0%</span>)
-  </div>
-
-  <!-- Barra Bande -->
-  <div style="width:100%; height:26px; border-radius:13px; overflow:hidden; border:1px solid #000; display:flex; background:#ddd;" id="band-bar-container"></div>
-  <div style="margin:6px 0 0 0; font-size:13px; color:#333;" id="band-legend-container">
-    <span id="status-text" style="color: #666; font-style: italic;">Loading log...</span>
-  </div>
+<div class="card">
+    <h2>My operating style and pwr setting</h2>
+    <div id="content">Caricamento statistiche in corso...</div>
 </div>
 
 <script>
-async function loadAdifStats() {
-    // Legge il file log.adi direttamente dallo stesso spazio Netlify, evitando blocchi cross-origin su QRZ
-    const adifUrl = 'log.adi?t=' + new Date().getTime();
+    const bandColors = {
+        '20m': '#e8a33d', '40m': '#6c3483', '80m': '#1a9e77', 
+        '30m': '#e186a8', '15m': '#2e7fd6', '10m': '#c0392b', 
+        '17m': '#1e8449', '12m': '#7f8c8d', '160m': '#d35400', 
+        '6m': '#9b59b6', '2m': '#3498db'
+    };
 
-    try {
-        const response = await fetch(adifUrl, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Impossibile scaricare il file ADIF');
-        const text = await response.text();
+    fetch('log.adi')
+        .then(response => response.text())
+        .then(text => {
+            const records = text.split(/<\s*eor\s*>/i);
+            let totalQso = 0;
+            let modes = { CW: 0, SSB: 0, FT8: 0, OTHER: 0 };
+            let power = { QRP: 0, QRO: 0, UNKNOWN: 0 };
+            let bands = {};
 
-        const records = text.split(/<\s*eor\s*>/i);
-        
-        let totalQso = 0;
-        let modes = { CW: 0, SSB: 0, FT8: 0, OTHER: 0 };
-        let power = { QRP: 0, QRO: 0, UNKNOWN: 0 };
-        let bands = {};
+            records.forEach(record => {
+                if (!/<\s*call\s*[:>]/i.test(record)) return;
+                totalQso++;
 
-        records.forEach(record => {
-            if (!/<\s*call\s*[:>]/i.test(record)) return;
-            totalQso++;
+                // 1. MODI
+                let modeMatch = record.match(/<\s*mode\s*(?::\d+)?\s*>([^<>]+)/i);
+                let m = modeMatch ? modeMatch[1].trim().toUpperCase() : 'OTHER';
+                if (m.includes('CW')) modes.CW++;
+                else if (m.includes('SSB') || m.includes('USB') || m.includes('LSB')) modes.SSB++;
+                else if (m.includes('FT8')) modes.FT8++;
+                else modes.OTHER++;
 
-            let modeMatch = record.match(/<\s*mode\s*(?::\d+)?\s*>([^<>]+)/i);
-            let m = modeMatch ? modeMatch[1].trim().toUpperCase() : 'OTHER';
-            
-            if (m.includes('CW')) {
-                modes.CW++;
-            } else if (m.includes('SSB') || m.includes('USB') || m.includes('LSB')) {
-                modes.SSB++;
-            } else if (m.includes('FT8')) {
-                modes.FT8++;
-            } else {
-                modes.OTHER++;
-            }
+                // 2. POTENZA (Cerca QRP nelle note/commenti o nel tx_pwr)
+                let noteMatch = record.match(/<\s*(?:notes|comment|app_[^>]+)\s*(?::\d+)?\s*>([^<>]+)/i);
+                let pwrMatch = record.match(/<\s*tx_pwr\s*(?::\d+)?\s*>([^<>]+)/i);
+                
+                let powerText = (pwrMatch ? pwrMatch[1] : '') + ' ' + (noteMatch ? noteMatch[1] : '');
+                powerText = powerText.toUpperCase();
 
-            let pwrMatch = record.match(/<\s*tx_pwr\s*(?::\d+)?\s*>([^<>]+)/i);
-            if (pwrMatch) {
-                let p = parseFloat(pwrMatch[1]);
-                if (!isNaN(p)) {
-                    if (p <= 5) power.QRP++;
-                    else power.QRO++;
+                if (powerText.includes('QRP')) {
+                    power.QRP++;
+                } else if (pwrMatch) {
+                    let p = parseFloat(pwrMatch[1]);
+                    if (!isNaN(p)) {
+                        if (p <= 5) power.QRP++;
+                        else power.QRO++;
+                    } else {
+                        power.QRO++;
+                    }
                 } else {
                     power.UNKNOWN++;
                 }
-            } else {
-                power.UNKNOWN++;
-            }
 
-            let bandMatch = record.match(/<\s*band\s*(?::\d+)?\s*>([^<>]+)/i);
-            if (bandMatch) {
-                let b = bandMatch[1].trim().toLowerCase();
-                bands[b] = (bands[b] || 0) + 1;
-            } else {
-                bands['unknown'] = (bands['unknown'] || 0) + 1;
-            }
+                // 3. BANDE
+                let bandMatch = record.match(/<\s*band\s*(?::\d+)?\s*>([^<>]+)/i);
+                if (bandMatch) {
+                    let b = bandMatch[1].trim().toLowerCase();
+                    if (!b.endsWith('m') && !b.includes('cm') && !b.includes('km')) {
+                        b = b + 'm'; 
+                    }
+                    bands[b] = (bands[b] || 0) + 1;
+                } else {
+                    bands['unknown'] = (bands['unknown'] || 0) + 1;
+                }
+            });
+
+            if (totalQso === 0) totalQso = 1;
+
+            // Percentuali
+            let pCW = ((modes.CW / totalQso) * 100).toFixed(1);
+            let pSSB = ((modes.SSB / totalQso) * 100).toFixed(1);
+            let pFT8 = ((modes.FT8 / totalQso) * 100).toFixed(1);
+            let pOther = ((modes.OTHER / totalQso) * 100).toFixed(1);
+
+            let pQrp = ((power.QRP / totalQso) * 100).toFixed(1);
+            let pQro = ((power.QRO / totalQso) * 100).toFixed(1);
+            let pUnspec = ((power.UNKNOWN / totalQso) * 100).toFixed(1);
+
+            let sortedBands = Object.entries(bands).sort((a, b) => b[1] - a[1]);
+
+            // HTML delle barre e leggende
+            let html = `
+                <!-- MODI -->
+                <div class="bar-container">
+                    <div class="bar-segment" style="width: ${pCW}%; background: #c0392b;" title="CW: ${pCW}%"></div>
+                    <div class="bar-segment" style="width: ${pSSB}%; background: #1e8449;" title="SSB: ${pSSB}%"></div>
+                    <div class="bar-segment" style="width: ${pFT8}%; background: #e67e22;" title="FT8: ${pFT8}%"></div>
+                    <div class="bar-segment" style="width: ${pOther}%; background: #7f8c8d;" title="Other: ${pOther}%"></div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><span class="color-dot" style="background: #c0392b;"></span>CW (${pCW}%)</div>
+                    <div class="legend-item"><span class="color-dot" style="background: #1e8449;"></span>SSB (${pSSB}%)</div>
+                    <div class="legend-item"><span class="color-dot" style="background: #e67e22;"></span>FT8 (${pFT8}%)</div>
+                    <div class="legend-item"><span class="color-dot" style="background: #7f8c8d;"></span>Other (${pOther}%)</div>
+                </div>
+
+                <!-- POTENZA -->
+                <div class="bar-container">
+                    <div class="bar-segment" style="width: ${pQrp}%; background: #2e7fd6;" title="QRP: ${pQrp}%"></div>
+                    <div class="bar-segment" style="width: ${pQro}%; background: #c0392b;" title="QRO: ${pQro}%"></div>
+                    <div class="bar-segment" style="width: ${pUnspec}%; background: #7f8c8d;" title="Not specified: ${pUnspec}%"></div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><span class="color-dot" style="background: #2e7fd6;"></span>QRP (${pQrp}%)</div>
+                    <div class="legend-item"><span class="color-dot" style="background: #c0392b;"></span>QRO (${pQro}%)</div>
+                    <div class="legend-item"><span class="color-dot" style="background: #7f8c8d;"></span>Not specified (${pUnspec}%)</div>
+                </div>
+
+                <!-- BANDE -->
+                <div class="bar-container">
+                    ${sortedBands.map(([band, count]) => {
+                        let pB = ((count / totalQso) * 100).toFixed(1);
+                        let col = bandColors[band] || '#555555';
+                        return `<div class="bar-segment" style="width: ${pB}%; background: ${col};" title="${band}: ${pB}%"></div>`;
+                    }).join('')}
+                </div>
+                <div class="legend">
+                    ${sortedBands.map(([band, count]) => {
+                        let pB = ((count / totalQso) * 100).toFixed(1);
+                        let col = bandColors[band] || '#555555';
+                        return `<div class="legend-item"><span class="color-dot" style="background: ${col};"></span>${band} (${pB}%)</div>`;
+                    }).join('')}
+                </div>
+            `;
+
+            document.getElementById('content').innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('content').innerHTML = "Errore nel caricamento del file log.adi";
         });
-
-        if (totalQso === 0) {
-            document.getElementById('status-text').innerText = "File letto, ma nessun QSO trovato.";
-            return;
-        }
-
-        let pCW = (modes.CW / totalQso) * 100;
-        let pSSB = (modes.SSB / totalQso) * 100;
-        let pFT8 = (modes.FT8 / totalQso) * 100;
-        let pOther = (modes.OTHER / totalQso) * 100;
-
-        document.getElementById('bar-cw').style.width = pCW + '%';
-        document.getElementById('bar-ssb').style.width = pSSB + '%';
-        document.getElementById('bar-ft8').style.width = pFT8 + '%';
-        document.getElementById('bar-other').style.width = pOther + '%';
-        
-        document.getElementById('pct-cw').innerText = pCW.toFixed(1) + '%';
-        document.getElementById('pct-ssb').innerText = pSSB.toFixed(1) + '%';
-        document.getElementById('pct-ft8').innerText = pFT8.toFixed(1) + '%';
-        document.getElementById('pct-other').innerText = pOther.toFixed(1) + '%';
-
-        let pQrp = (power.QRP / totalQso) * 100;
-        let pQro = (power.QRO / totalQso) * 100;
-        let pUnspec = (power.UNKNOWN / totalQso) * 100;
-
-        document.getElementById('bar-qrp').style.width = pQrp + '%';
-        document.getElementById('bar-qro').style.width = pQro + '%';
-        document.getElementById('bar-unspec').style.width = pUnspec + '%';
-
-        document.getElementById('pct-qrp').innerText = pQrp.toFixed(1) + '%';
-        document.getElementById('pct-qro').innerText = pQro.toFixed(1) + '%';
-        document.getElementById('pct-unspec').innerText = pUnspec.toFixed(1) + '%';
-
-        document.getElementById('status-text').innerText = `Analizzati ${totalQso} QSO con successo.`;
-
-        let sortedBands = Object.entries(bands).sort((a, b) => b[1] - a[1]);
-        let bandBarHtml = '';
-        let bandLegendHtml = '';
-        const bandColors = {'20m': '#e8a33d', '40m': '#6c3483', '80m': '#1a9e77', '30m': '#e186a8', '15m': '#2e7fd6', '10m': '#c0392b', '17m': '#1e8449', '12m': '#7f8c8d', '160m': '#d35400'};
-
-        sortedBands.forEach(([band, count]) => {
-            let pBand = (count / totalQso) * 100;
-            let color = bandColors[band] || '#555555';
-            bandBarHtml += `<div style="width:${pBand}%; background:${color};"></div>`;
-            bandLegendHtml += `<span style="display:inline-block; width:10px; height:10px; background:${color}; margin:0 4px 0 12px;"></span>${band} (${pBand.toFixed(1)}%) `;
-        });
-
-        document.getElementById('band-bar-container').innerHTML = bandBarHtml;
-        document.getElementById('band-legend-container').innerHTML = bandLegendHtml;
-
-    } catch (error) {
-        console.error(error);
-        document.getElementById('status-text').innerText = "Errore di connessione al log.";
-    }
-}
-
-loadAdifStats();
 </script>
 
 </body>
