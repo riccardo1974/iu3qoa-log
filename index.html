@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>My Operating Style</title>
 </head>
-<body style="background: transparent; padding: 0; margin: 0;">
+<body style="background: transparent; padding: 0; margin: 0; overflow: hidden;">
 
-<div style="font-family: Arial, Helvetica, sans-serif; background:#f0f0f0; border-radius:12px; padding:24px 28px; width:900px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+<div id="widget-box" style="font-family: Arial, Helvetica, sans-serif; background:#f0f0f0; border-radius:12px; padding:24px 28px; width:900px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
   <h2 style="text-align:center; font-size:24px; color:#333; margin:0 0 20px 0;">My operating style and pwr setting</h2>
 
   <!-- Barra Modi -->
@@ -44,10 +44,10 @@
 
 <script>
 async function loadAdifStats() {
-    const adifUrl = 'https://raw.githubusercontent.com/riccardo1974/iu3qoa-log/main/log.adi';
+    const adifUrl = 'https://raw.githubusercontent.com/riccardo1974/iu3qoa-log/main/log.adi?t=' + new Date().getTime();
 
     try {
-        const response = await fetch(adifUrl);
+        const response = await fetch(adifUrl, { mode: 'cors', cache: 'no-store' });
         if (!response.ok) throw new Error('Impossibile scaricare il file ADIF');
         const text = await response.text();
 
@@ -131,7 +131,7 @@ async function loadAdifStats() {
 
         document.getElementById('status-text').innerText = `Analizzati ${totalQso} QSO con successo.`;
 
-        let sortedBands = Object.entries(bands).sort((a, b) => b[1] - b[0]); // Ordinamento sicuro
+        let sortedBands = Object.entries(bands).sort((a, b) => b[1] - a[1]);
         let bandBarHtml = '';
         let bandLegendHtml = '';
         const bandColors = {'20m': '#e8a33d', '40m': '#6c3483', '80m': '#1a9e77', '30m': '#e186a8', '15m': '#2e7fd6', '10m': '#c0392b', '17m': '#1e8449', '12m': '#7f8c8d', '160m': '#d35400'};
@@ -148,7 +148,7 @@ async function loadAdifStats() {
 
     } catch (error) {
         console.error(error);
-        document.getElementById('status-text').innerText = "Errore nel caricamento del log.";
+        document.getElementById('status-text').innerText = "Errore di connessione al log.";
     }
 }
 
