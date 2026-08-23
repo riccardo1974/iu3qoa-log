@@ -8,6 +8,7 @@ Legge log.adi nella stessa cartella, scrive index.html nella stessa cartella.
 """
 
 import re
+from datetime import datetime, timezone
 
 BAND_COLORS = {
     '20m': '#e8a33d', '40m': '#6c3483', '80m': '#1a9e77',
@@ -98,7 +99,7 @@ def bar_and_legend(segments):
     return bar, legend
 
 
-def build_html(total, modes, power, bands):
+def build_html(total, modes, power, bands, updated_at):
     mode_segments = [
         ('CW', pct(modes['CW'], total), '#c0392b'),
         ('SSB', pct(modes['SSB'], total), '#1e8449'),
@@ -128,13 +129,14 @@ def build_html(total, modes, power, bands):
 <title>QSO Statistics - IU3QOA</title>
 <style>
 body {{ margin:0; padding:0; background-color:transparent; font-family:Arial,sans-serif; color:#333; display:flex; justify-content:center; align-items:center; height:100vh; }}
-.card {{ width:900px; height:306px; background:#f0f0f0; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); padding:20px 28px; box-sizing:border-box; position:relative; }}
+.card {{ width:900px; height:322px; background:#f0f0f0; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); padding:20px 28px; box-sizing:border-box; position:relative; }}
 h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
 .bar-container {{ width:844px; height:26px; background:#ddd; border:1px solid #000; border-radius:13px; display:flex; overflow:hidden; margin-bottom:6px; }}
 .bar-segment {{ height:100%; }}
 .legend {{ display:flex; flex-wrap:wrap; gap:15px; font-size:13px; margin-bottom:14px; }}
 .legend-item {{ display:flex; align-items:center; gap:5px; }}
 .color-dot {{ width:10px; height:10px; border-radius:50%; display:inline-block; }}
+.last-update {{ text-align:right; font-size:11px; color:#888; margin-top:4px; }}
 </style>
 </head>
 <body>
@@ -151,6 +153,8 @@ h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
 <div class="bar-container">{band_bar}</div>
 <div class="legend">{band_legend}</div>
 
+<div class="last-update">Last update: {updated_at}</div>
+
 </div>
 </div>
 </body>
@@ -160,7 +164,8 @@ h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
 
 if __name__ == '__main__':
     total, modes, power, bands = parse_log('log.adi')
-    html = build_html(total, modes, power, bands)
+    updated_at = datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M UTC')
+    html = build_html(total, modes, power, bands, updated_at)
     with open('index.html', 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f"Generato index.html - {total} QSO totali")
+    print(f"Generato index.html - {total} QSO totali - aggiornato {updated_at}")
