@@ -107,25 +107,25 @@
                 else if (m.includes('FT8')) modes.FT8++;
                 else modes.OTHER++;
 
-                // 2. POTENZA (Cerca QRP nelle note/commenti o nel tx_pwr)
-                let noteMatch = record.match(/<\s*(?:notes|comment|app_[^>]+)\s*(?::\d+)?\s*>([^<>]+)/i);
-                let pwrMatch = record.match(/<\s*tx_pwr\s*(?::\d+)?\s*>([^<>]+)/i);
-                
-                let powerText = (pwrMatch ? pwrMatch[1] : '') + ' ' + (noteMatch ? noteMatch[1] : '');
-                powerText = powerText.toUpperCase();
+                // 2. POTENZA (letta dal campo NOTES/COMMENT, es. "15 watt", "45W", "QRP 5W")
+                let noteMatch = record.match(/<\s*(?:notes|comment)\s*(?::\d+)?\s*>([^<>]+)/i);
+                let noteText = noteMatch ? noteMatch[1].toUpperCase().trim() : '';
 
-                if (powerText.includes('QRP')) {
+                if (noteText.includes('QRP')) {
                     power.QRP++;
-                } else if (pwrMatch) {
-                    let p = parseFloat(pwrMatch[1]);
-                    if (!isNaN(p)) {
-                        if (p <= 5) power.QRP++;
-                        else power.QRO++;
-                    } else {
-                        power.QRO++;
-                    }
+                } else if (noteText === '') {
+                    // Nessuna nota scritta: si assume QRO
+                    power.QRO++;
                 } else {
-                    power.UNKNOWN++;
+                    let wMatch = noteText.match(/(\d+(?:\.\d+)?)\s*W/);
+                    if (wMatch) {
+                        let p = parseFloat(wMatch[1]);
+                        if (p <= 5) power.QRP++;
+                        else if (p >= 10) power.QRO++;
+                        else power.UNKNOWN++;
+                    } else {
+                        power.UNKNOWN++;
+                    }
                 }
 
                 // 3. BANDE
