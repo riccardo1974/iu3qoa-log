@@ -1,0 +1,3 @@
+[build]
+  command = "python3 generate_stats.py"
+  publish = "."
