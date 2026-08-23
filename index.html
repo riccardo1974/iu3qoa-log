@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>My Operating Style</title>
 </head>
-<body style="background: #eef2f3; padding: 40px 0;">
+<body style="background: transparent; padding: 0; margin: 0;">
 
-<div style="font-family: Arial, Helvetica, sans-serif; background:#f0f0f0; border-radius:12px; padding:24px 28px; max-width:640px; margin:0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+<div style="font-family: Arial, Helvetica, sans-serif; background:#f0f0f0; border-radius:12px; padding:24px 28px; width:900px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
   <h2 style="text-align:center; font-size:24px; color:#333; margin:0 0 20px 0;">My operating style and pwr setting</h2>
 
   <!-- Barra Modi -->
@@ -131,7 +131,7 @@ async function loadAdifStats() {
 
         document.getElementById('status-text').innerText = `Analizzati ${totalQso} QSO con successo.`;
 
-        let sortedBands = Object.entries(bands).sort((a, b) => b[1] - a[1]);
+        let sortedBands = Object.entries(bands).sort((a, b) => b[1] - b[0]); // Ordinamento sicuro
         let bandBarHtml = '';
         let bandLegendHtml = '';
         const bandColors = {'20m': '#e8a33d', '40m': '#6c3483', '80m': '#1a9e77', '30m': '#e186a8', '15m': '#2e7fd6', '10m': '#c0392b', '17m': '#1e8449', '12m': '#7f8c8d', '160m': '#d35400'};
