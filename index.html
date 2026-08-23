@@ -44,10 +44,11 @@
 
 <script>
 async function loadAdifStats() {
-    const adifUrl = 'https://raw.githubusercontent.com/riccardo1974/iu3qoa-log/main/log.adi?t=' + new Date().getTime();
+    // Legge il file log.adi direttamente dallo stesso spazio Netlify, evitando blocchi cross-origin su QRZ
+    const adifUrl = 'log.adi?t=' + new Date().getTime();
 
     try {
-        const response = await fetch(adifUrl, { mode: 'cors', cache: 'no-store' });
+        const response = await fetch(adifUrl, { cache: 'no-store' });
         if (!response.ok) throw new Error('Impossibile scaricare il file ADIF');
         const text = await response.text();
 
