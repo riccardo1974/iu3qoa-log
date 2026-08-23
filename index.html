@@ -42,7 +42,6 @@
 
 <script>
 async function loadAdifStats() {
-    // URL aggiornato con log.adi e iu3qoa-qsolog
     const adifUrl = 'https://raw.githubusercontent.com/riccardo1974/iu3qoa-qsolog/main/log.adi';
 
     try {
@@ -61,14 +60,12 @@ async function loadAdifStats() {
             if (!record.includes('<call:')) return;
             totalQso++;
 
-            // Modo
             const modeMatch = record.match(/<mode:\d+>([^<>\s]+)/i);
             if (modeMatch) {
                 let m = modeMatch[1].toUpperCase();
                 if (modes[m] !== undefined) modes[m]++;
             }
 
-            // Potenza
             const pwrMatch = record.match(/<tx_pwr:\d+>([\d.]+)/i);
             if (pwrMatch) {
                 let p = parseFloat(pwrMatch[1]);
@@ -78,7 +75,6 @@ async function loadAdifStats() {
                 power.UNKNOWN++;
             }
 
-            // Banda
             const bandMatch = record.match(/<band:\d+>([^<>\s]+)/i);
             if (bandMatch) {
                 let b = bandMatch[1].toLowerCase();
@@ -91,7 +87,6 @@ async function loadAdifStats() {
             return;
         }
 
-        // Calcoli percentuali Modi
         let pCW = (modes.CW / totalQso) * 100;
         let pSSB = (modes.SSB / totalQso) * 100;
         let pFT8 = (modes.FT8 / totalQso) * 100;
@@ -104,7 +99,6 @@ async function loadAdifStats() {
         document.getElementById('pct-ssb').innerText = pSSB.toFixed(1) + '%';
         document.getElementById('pct-ft8').innerText = pFT8.toFixed(1) + '%';
 
-        // Calcoli percentuali Potenza
         let pQrp = (power.QRP / totalQso) * 100;
         let pQro = (power.QRO / totalQso) * 100;
         let pUnspec = (power.UNKNOWN / totalQso) * 100;
@@ -119,7 +113,6 @@ async function loadAdifStats() {
 
         document.getElementById('status-text').innerText = `Analizzati ${totalQso} QSO con successo.`;
 
-        // Bande dinamiche ordinate
         let sortedBands = Object.entries(bands).sort((a, b) => b[1] - a[1]);
         let bandBarHtml = '';
         let bandLegendHtml = '';
