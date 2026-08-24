@@ -136,7 +136,7 @@ h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
 .legend {{ display:flex; flex-wrap:wrap; gap:15px; font-size:13px; margin-bottom:14px; }}
 .legend-item {{ display:flex; align-items:center; gap:5px; }}
 .color-dot {{ width:10px; height:10px; border-radius:50%; display:inline-block; }}
-.last-update {{ text-align:right; font-size:11px; color:#888; margin-top:4px; }}
+.last-update {{ text-align:left; font-size:11px; color:#888; margin-top:4px; }}
 </style>
 </head>
 <body>
