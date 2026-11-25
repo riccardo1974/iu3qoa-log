@@ -3,7 +3,7 @@
 Genera index.html con le statistiche QSO gia' calcolate (nessun fetch/JS
 lato client necessario), a partire da log.adi.
 
-Contenuto della card:
+Contenuto della card (senza titolo):
   - Bande: vengono mostrate solo quelle presenti nel log. Se almeno due bande
     hanno una percentuale sotto MIN_BAND_PCT vengono raggruppate in "Other"
     (impostare MIN_BAND_PCT = 0 per mostrarle tutte separatamente).
@@ -139,8 +139,7 @@ def build_html(total, bands, hours, updated_at):
 <title>QSO Statistics - IU3QOA</title>
 <style>
 body {{ margin:0; padding:0; background-color:transparent; font-family:Arial,sans-serif; color:#333; display:flex; justify-content:center; align-items:center; height:100vh; }}
-.card {{ width:900px; height:330px; background:#f0f0f0; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); padding:20px 28px; box-sizing:border-box; position:relative; }}
-h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
+.card {{ width:900px; height:292px; background:#f0f0f0; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); padding:20px 28px; box-sizing:border-box; position:relative; }}
 .bar-container {{ width:844px; height:26px; background:#ddd; border:1px solid #000; border-radius:13px; display:flex; overflow:hidden; margin-bottom:6px; }}
 .bar-segment {{ height:100%; }}
 .legend {{ display:flex; flex-wrap:wrap; gap:15px; font-size:13px; margin-bottom:14px; }}
@@ -157,7 +156,6 @@ h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
 </head>
 <body>
 <div class="card">
-<h2>My bands and most active hours</h2>
 <div id="content">
 
 <div class="bar-container">{band_bar}</div>
