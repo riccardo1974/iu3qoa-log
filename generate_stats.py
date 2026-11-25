@@ -3,18 +3,12 @@
 Genera index.html con le statistiche QSO gia' calcolate (nessun fetch/JS
 lato client necessario), a partire da log.adi.
 
-Regola potenza (campo COMMENT):
-  - campo vuoto o assente          -> QRP
-  - testo "QRP"                    -> QRP
-  - valore <= 5 (W)                -> QRP
-  - qualsiasi altro caso           -> QRO
-
-Bande: vengono mostrate solo quelle presenti nel log. Se almeno due bande
-hanno una percentuale sotto MIN_BAND_PCT vengono raggruppate in "Other"
-(impostare MIN_BAND_PCT = 0 per mostrarle tutte separatamente).
-
-Orari: istogramma dei QSO per ora UTC (campo TIME_ON) con evidenziate
-le TOP_HOURS fasce orarie piu' frequenti.
+Contenuto della card:
+  - Bande: vengono mostrate solo quelle presenti nel log. Se almeno due bande
+    hanno una percentuale sotto MIN_BAND_PCT vengono raggruppate in "Other"
+    (impostare MIN_BAND_PCT = 0 per mostrarle tutte separatamente).
+  - Orari: istogramma dei QSO per ora UTC (campo TIME_ON) con evidenziate
+    le TOP_HOURS fasce orarie piu' frequenti.
 
 Uso: python3 generate_stats.py
 Legge log.adi nella stessa cartella, scrive index.html nella stessa cartella.
@@ -34,42 +28,12 @@ BAND_COLORS = {
 }
 
 
-def classify_power(comment):
-    """Restituisce 'QRP' o 'QRO' a partire dal testo del campo COMMENT."""
-    comment = comment.upper().strip()
-
-    # Campo vuoto -> QRP
-    if comment == '':
-        return 'QRP'
-
-    # Scritto esplicitamente QRP
-    if 'QRP' in comment:
-        return 'QRP'
-
-    # Valore seguito da W (es. "5W", "2,5 W", "100 WATT")
-    w_match = re.search(r'(\d+(?:[.,]\d+)?)\s*W', comment)
-    if w_match:
-        value = float(w_match.group(1).replace(',', '.'))
-        return 'QRP' if value <= 5 else 'QRO'
-
-    # Solo un numero (es. "5", "100")
-    n_match = re.fullmatch(r'(\d+(?:[.,]\d+)?)', comment)
-    if n_match:
-        value = float(n_match.group(1).replace(',', '.'))
-        return 'QRP' if value <= 5 else 'QRO'
-
-    # Qualsiasi altro caso -> QRO
-    return 'QRO'
-
-
 def parse_log(path):
     with open(path, 'r', encoding='utf-8', errors='ignore') as f:
         text = f.read()
 
     records = re.split(r'<\s*eor\s*>', text, flags=re.I)
     total = 0
-    modes = {'CW': 0, 'SSB': 0, 'FT8': 0, 'OTHER': 0}
-    power = {'QRP': 0, 'QRO': 0}
     bands = {}
     hours = [0] * 24
 
@@ -77,23 +41,6 @@ def parse_log(path):
         if not re.search(r'<\s*call\s*[:>]', record, re.I):
             continue
         total += 1
-
-        # Modo
-        mode_match = re.search(r'<\s*mode\s*(?::\d+)?\s*>([^<>]+)', record, re.I)
-        m = mode_match.group(1).strip().upper() if mode_match else 'OTHER'
-        if 'CW' in m:
-            modes['CW'] += 1
-        elif 'SSB' in m or 'USB' in m or 'LSB' in m:
-            modes['SSB'] += 1
-        elif 'FT8' in m:
-            modes['FT8'] += 1
-        else:
-            modes['OTHER'] += 1
-
-        # Potenza (dal campo COMMENT)
-        comment_match = re.search(r'<\s*comment\s*(?::\d+)?\s*>([^<>]+)', record, re.I)
-        comment = comment_match.group(1) if comment_match else ''
-        power[classify_power(comment)] += 1
 
         # Banda
         band_match = re.search(r'<\s*band\s*(?::\d+)?\s*>([^<>]+)', record, re.I)
@@ -115,7 +62,7 @@ def parse_log(path):
     if total == 0:
         total = 1
 
-    return total, modes, power, bands, hours
+    return total, bands, hours
 
 
 def pct(n, total):
@@ -179,21 +126,8 @@ def build_hours_chart(hours):
     return bars, labels, top_text
 
 
-def build_html(total, modes, power, bands, hours, updated_at):
-    mode_segments = [
-        ('CW', pct(modes['CW'], total), '#c0392b'),
-        ('SSB', pct(modes['SSB'], total), '#1e8449'),
-        ('FT8', pct(modes['FT8'], total), '#e67e22'),
-        ('Other', pct(modes['OTHER'], total), '#7f8c8d'),
-    ]
-    power_segments = [
-        ('QRP', pct(power['QRP'], total), '#2e7fd6'),
-        ('QRO', pct(power['QRO'], total), '#c0392b'),
-    ]
+def build_html(total, bands, hours, updated_at):
     band_segments = build_band_segments(bands, total)
-
-    mode_bar, mode_legend = bar_and_legend(mode_segments)
-    power_bar, power_legend = bar_and_legend(power_segments)
     band_bar, band_legend = bar_and_legend(band_segments)
     hour_bars, hour_labels, top_text = build_hours_chart(hours)
 
@@ -205,7 +139,7 @@ def build_html(total, modes, power, bands, hours, updated_at):
 <title>QSO Statistics - IU3QOA</title>
 <style>
 body {{ margin:0; padding:0; background-color:transparent; font-family:Arial,sans-serif; color:#333; display:flex; justify-content:center; align-items:center; height:100vh; }}
-.card {{ width:900px; height:460px; background:#f0f0f0; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); padding:20px 28px; box-sizing:border-box; position:relative; }}
+.card {{ width:900px; height:330px; background:#f0f0f0; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); padding:20px 28px; box-sizing:border-box; position:relative; }}
 h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
 .bar-container {{ width:844px; height:26px; background:#ddd; border:1px solid #000; border-radius:13px; display:flex; overflow:hidden; margin-bottom:6px; }}
 .bar-segment {{ height:100%; }}
@@ -223,14 +157,8 @@ h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
 </head>
 <body>
 <div class="card">
-<h2>My operating style and pwr setting</h2>
+<h2>My bands and most active hours</h2>
 <div id="content">
-
-<div class="bar-container">{mode_bar}</div>
-<div class="legend">{mode_legend}</div>
-
-<div class="bar-container">{power_bar}</div>
-<div class="legend">{power_legend}</div>
 
 <div class="bar-container">{band_bar}</div>
 <div class="legend">{band_legend}</div>
@@ -250,9 +178,9 @@ h2 {{ text-align:center; font-size:20px; margin:0 0 18px 0; color:#333; }}
 
 
 if __name__ == '__main__':
-    total, modes, power, bands, hours = parse_log('log.adi')
+    total, bands, hours = parse_log('log.adi')
     updated_at = datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M UTC')
-    html = build_html(total, modes, power, bands, hours, updated_at)
+    html = build_html(total, bands, hours, updated_at)
     with open('index.html', 'w', encoding='utf-8') as f:
         f.write(html)
     print(f"Generato index.html - {total} QSO totali - aggiornato {updated_at}")
