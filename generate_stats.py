@@ -3,6 +3,12 @@
 Genera index.html con le statistiche QSO gia' calcolate (nessun fetch/JS
 lato client necessario), a partire da log.adi.
 
+Regola potenza (campo COMMENT):
+  - campo vuoto o assente          -> QRP
+  - testo "QRP"                    -> QRP
+  - valore <= 5 (W)                -> QRP
+  - qualsiasi altro caso           -> QRO
+
 Uso: python3 generate_stats.py
 Legge log.adi nella stessa cartella, scrive index.html nella stessa cartella.
 """
@@ -18,6 +24,34 @@ BAND_COLORS = {
 }
 
 
+def classify_power(comment):
+    """Restituisce 'QRP' o 'QRO' a partire dal testo del campo COMMENT."""
+    comment = comment.upper().strip()
+
+    # Campo vuoto -> QRP
+    if comment == '':
+        return 'QRP'
+
+    # Scritto esplicitamente QRP
+    if 'QRP' in comment:
+        return 'QRP'
+
+    # Valore seguito da W (es. "5W", "2,5 W", "100 WATT")
+    w_match = re.search(r'(\d+(?:[.,]\d+)?)\s*W', comment)
+    if w_match:
+        value = float(w_match.group(1).replace(',', '.'))
+        return 'QRP' if value <= 5 else 'QRO'
+
+    # Solo un numero (es. "5", "100")
+    n_match = re.fullmatch(r'(\d+(?:[.,]\d+)?)', comment)
+    if n_match:
+        value = float(n_match.group(1).replace(',', '.'))
+        return 'QRP' if value <= 5 else 'QRO'
+
+    # Qualsiasi altro caso -> QRO
+    return 'QRO'
+
+
 def parse_log(path):
     with open(path, 'r', encoding='utf-8', errors='ignore') as f:
         text = f.read()
@@ -25,7 +59,7 @@ def parse_log(path):
     records = re.split(r'<\s*eor\s*>', text, flags=re.I)
     total = 0
     modes = {'CW': 0, 'SSB': 0, 'FT8': 0, 'OTHER': 0}
-    power = {'QRP': 0, 'QRO': 0, 'UNKNOWN': 0}
+    power = {'QRP': 0, 'QRO': 0}
     bands = {}
 
     for record in records:
@@ -45,26 +79,10 @@ def parse_log(path):
         else:
             modes['OTHER'] += 1
 
-        # Potenza (dal campo NOTES/COMMENT)
-        note_match = re.search(r'<\s*(?:notes|comment)\s*(?::\d+)?\s*>([^<>]+)', record, re.I)
-        note = note_match.group(1).upper().strip() if note_match else ''
-
-        if 'QRP' in note:
-            power['QRP'] += 1
-        elif note == '':
-            power['QRO'] += 1
-        else:
-            w_match = re.search(r'(\d+(?:\.\d+)?)\s*W', note)
-            if w_match:
-                p = float(w_match.group(1))
-                if p <= 5:
-                    power['QRP'] += 1
-                elif p >= 10:
-                    power['QRO'] += 1
-                else:
-                    power['UNKNOWN'] += 1
-            else:
-                power['UNKNOWN'] += 1
+        # Potenza (dal campo COMMENT)
+        comment_match = re.search(r'<\s*comment\s*(?::\d+)?\s*>([^<>]+)', record, re.I)
+        comment = comment_match.group(1) if comment_match else ''
+        power[classify_power(comment)] += 1
 
         # Banda
         band_match = re.search(r'<\s*band\s*(?::\d+)?\s*>([^<>]+)', record, re.I)
@@ -109,7 +127,6 @@ def build_html(total, modes, power, bands, updated_at):
     power_segments = [
         ('QRP', pct(power['QRP'], total), '#2e7fd6'),
         ('QRO', pct(power['QRO'], total), '#c0392b'),
-        ('Not specified', pct(power['UNKNOWN'], total), '#7f8c8d'),
     ]
     sorted_bands = sorted(bands.items(), key=lambda x: -x[1])
     band_segments = [
